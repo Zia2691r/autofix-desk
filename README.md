@@ -1,56 +1,58 @@
-# AutoFix Desk - Automated L1 Troubleshooting & Ticket Triage
+# AutoFix Desk: L1 IT Service Desk Automation & Security Triage Toolkit
 
-A home-lab project that mimics a service desk agent's workflow: **diagnose -> fix -> log -> escalate -> report**,
-plus a security-aware triage step (failed-logon detection routed to a SOC queue).
+> 📄 **[Read the Full Project Documentation & Execution Guide (Google Docs)](https://docs.google.com/document/d/14d4OM-4omVCinOZvEoUiBytoJq0dk-s5kzW77GsK7Zg/edit?usp=drivesdk)**
 
-> Lab project, not production software. Fixes run on Windows only. Test on your own VM.
+---
 
-## What it does
-| Stage | Behaviour |
-|---|---|
-| Diagnose | Internet, DNS, disk, temp folder, CPU/RAM, Print Spooler, failed logons (Event ID 4625) |
-| Fix | Flush DNS, renew IP, restart Spooler, clear temp. Each fix is followed by a **re-test** |
-| Ticket | SQLite ticket with ID, category, priority, SLA due time, L1-format resolution note |
-| Escalate | Fix failed or no safe fix -> L2 with evidence JSON. Failed logons -> SOC L1 (never auto-"fixed") |
-| De-duplicate | Won't open a second ticket while one is still Open for the same check |
-| Report | Excel MIS: formula-driven KPIs (auto-resolution %, SLA met %, escalation %, avg resolution time) + chart |
+## 🛠️ Overview
+**AutoFix Desk** is a Python and PowerShell-driven toolkit designed to replicate enterprise Tier 1 (L1) Service Desk operations. It automatically diagnoses system health, applies remediation scripts, logs tickets into a database, escalates unresolved issues to L2 support, and routes security anomalies (failed logons) to a SOC queue.
 
-## Setup (Windows lab VM, Python 3.9+)
-```
+---
+
+## 📸 Execution Screenshots & Demonstration
+
+### 1. Health Diagnostic Scan (Dry Run)
+*Running system diagnostic checks across connectivity, DNS, disk space, CPU/RAM, and Windows Event Logs.*
+![Health Diagnostic Scan](assets/Picture1.png)
+
+### 2. Live Auto-Fix Execution & L2 Escalation
+*Executing auto-fix actions, detecting unresolvable low disk space, and automatically escalating INC20261027-0001 to L2.*
+![Auto-Fix and Escalation](assets/Picture2.png)
+
+### 3. Automated MIS Report Generation
+*Compiling incident statistics into a daily Excel report.*
+![MIS Report Generation](assets/Picture3.png)
+
+### 4. Workspace Directory Structure
+*Extracted project scripts, database file, and documentation files.*
+![Workspace Directory](assets/Picture4.png)
+
+### 5. Excel MIS Dashboard Output
+*Management dashboard displaying ticket KPIs, escalation rates, and visual category breakdown.*
+![Excel MIS Dashboard](assets/Picture5.png)
+
+---
+
+## 🎯 Key Features
+* **Automated System Diagnostics:** Checks network connectivity, DNS, disk space, temp folder sizes, CPU/RAM usage, and print spooler status.
+* **Auto-Remediation:** Automatically flushes DNS, clears temporary folders, and restarts failed services.
+* **Security Event Monitoring:** Scans Windows Security Event Logs (Event ID 4625) for failed logon attempts and routes suspicious activity to a **SOC queue**.
+* **Database & SLA Ticketing:** Logs structured incident records into SQLite with priority tagging (P1-P4) and SLA target calculations.
+* **Daily MIS Reporting:** Uses `pandas` and `openpyxl` to produce automated Excel reporting dashboards.
+
+---
+
+## 🚀 Quick Start & Usage
+
+```powershell
+# Install required Python dependencies
 pip install -r requirements.txt
-python main.py scan --dry-run      # see what it would do, writes nothing
-```
 
-## Measure real results (this is what you quote in interviews)
-Open an **Administrator** prompt in a lab VM, then for each run: inject fault -> scan -> note result.
-```
-python lab_faults.py stop-spooler
+# Run diagnostic scan (Dry-Run mode)
+python main.py scan --dry-run
+
+# Run diagnostic scan and execute auto-fixes
 python main.py scan --fix
-python lab_faults.py fill-temp --mb 400
-python main.py scan --fix
-python lab_faults.py failed-logins --n 8
-python main.py scan --fix
-python lab_faults.py cleanup
-```
-Repeat 10+ times per fault (include a few you expect to fail), then:
-```
-python main.py stats
+
+# Generate daily Excel MIS report
 python main.py report
-```
-`python main.py demo` seeds **synthetic** tickets (source=demo) only to preview the report. Never quote those numbers.
-
-## Project layout
-`diagnostics.py` checks | `remediation.py` fixes | `ticketing.py` SQLite + SLA + notes | `report.py` Excel MIS |
-`main.py` CLI | `lab_faults.py` fault injection | `config.py` SLA targets and thresholds (assumptions, editable)
-
-## Resume bullet (fill in YOUR measured numbers)
-- Built AutoFix Desk, a Python/SQLite service desk automation toolkit that diagnoses common L1 faults, applies
-  safe fixes with re-test validation, logs SLA-tracked tickets and escalates with evidence; in [N] lab fault-injection
-  runs, auto-resolved [X]% with [Y]% SLA compliance and routed failed-logon spikes to a SOC queue.
-
-## Interview questions to prepare
-- Why re-test after a fix? (Confirms resolution before closing; avoids false closures.)
-- Why isn't the security alert auto-fixed? (Needs human investigation; auto-actions could destroy evidence.)
-- What's the SLA/TAT logic? (Priority -> minutes in config.py; "SLA met" = resolved before due time.)
-- What would you add for production? (ITSM integration like ServiceNow API, RBAC, audit logging, approvals for fixes.)
-- What are the limits? (Local machine only, Windows fixes only, thresholds not tuned to a real client.)
